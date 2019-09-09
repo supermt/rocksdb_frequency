@@ -254,10 +254,14 @@ Status CreateLoggerFromOptions(const std::string& dbname,
   }
 
   Env* env = options.env;
+
+
   std::string db_absolute_path;
   env->GetAbsolutePath(dbname, &db_absolute_path);
   std::string fname =
       InfoLogFileName(dbname, db_absolute_path, options.db_log_dir);
+
+
 
   env->CreateDirIfMissing(dbname);  // In case it does not exist
   // Currently we only support roll by time-to-roll and log size

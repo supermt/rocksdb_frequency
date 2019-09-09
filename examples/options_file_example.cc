@@ -9,6 +9,7 @@
 #include <cstdio>
 #include <string>
 #include <vector>
+#include <iostream>
 
 #include "rocksdb/cache.h"
 #include "rocksdb/compaction_filter.h"
@@ -20,7 +21,7 @@
 
 using namespace rocksdb;
 
-std::string kDBPath = "/tmp/rocksdb_options_file_example";
+std::string kDBPath = "[{\"/home/supermt/rocksdb_nvme\", 10GB}, {\"/media/supermt/hdd/dataset\", 1TB}]";
 
 namespace {
 // A dummy compaction filter
@@ -59,9 +60,12 @@ int main() {
 
   // destroy and open DB
   DB* db;
-  Status s = DestroyDB(kDBPath, Options(db_opt, cf_descs[0].options));
-  assert(s.ok());
-  s = DB::Open(Options(db_opt, cf_descs[0].options), kDBPath, &db);
+
+  Status s = DB::Open(Options(db_opt, cf_descs[0].options), kDBPath, &db);
+  // Status s = DestroyDB(kDBPath, Options(db_opt, cf_descs[0].options));
+  if (!s.ok()){
+    std::cout << s.ToString() << std::endl;
+  }
   assert(s.ok());
 
   // Create column family, and rocksdb will persist the options.

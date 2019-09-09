@@ -178,9 +178,7 @@ class VersionStorageInfo {
   void UpdateFilesByCompactionPri(CompactionPri compaction_pri);
 
   void GenerateLevel0NonOverlapping();
-  bool level0_non_overlapping() const {
-    return level0_non_overlapping_;
-  }
+  bool level0_non_overlapping() const { return level0_non_overlapping_; }
 
   // Check whether each file in this version is bottommost (i.e., nothing in its
   // key-range could possibly exist in an older file/level).
@@ -274,7 +272,7 @@ class VersionStorageInfo {
   const std::vector<FileMetaData*>& LevelFiles(int level) const {
     return files_[level];
   }
-
+  std::vector<FileMetaData*>* GetTheHierarchy() { return files_; }
   const rocksdb::LevelFilesBrief& LevelFilesBrief(int level) const {
     assert(level < static_cast<int>(level_files_brief_.size()));
     return level_files_brief_[level];
@@ -565,8 +563,8 @@ class Version {
 
   Status OverlapWithLevelIterator(const ReadOptions&, const EnvOptions&,
                                   const Slice& smallest_user_key,
-                                  const Slice& largest_user_key,
-                                  int level, bool* overlap);
+                                  const Slice& largest_user_key, int level,
+                                  bool* overlap);
 
   // Lookup the value for key or get all merge operands for key.
   // If do_merge = true (default) then lookup value for key.
@@ -658,9 +656,7 @@ class Version {
   ColumnFamilyData* cfd() const { return cfd_; }
 
   // Return the next Version in the linked list. Used for debug only
-  Version* TEST_Next() const {
-    return next_;
-  }
+  Version* TEST_Next() const { return next_; }
 
   int TEST_refs() const { return refs_; }
 
@@ -717,10 +713,10 @@ class Version {
   const MergeOperator* merge_operator_;
 
   VersionStorageInfo storage_info_;
-  VersionSet* vset_;            // VersionSet to which this Version belongs
-  Version* next_;               // Next version in linked list
-  Version* prev_;               // Previous version in linked list
-  int refs_;                    // Number of live refs to this version
+  VersionSet* vset_;  // VersionSet to which this Version belongs
+  Version* next_;     // Next version in linked list
+  Version* prev_;     // Previous version in linked list
+  int refs_;          // Number of live refs to this version
   const EnvOptions env_options_;
   const MutableCFOptions mutable_cf_options_;
 
@@ -740,7 +736,7 @@ class Version {
 
 struct ObsoleteFileInfo {
   FileMetaData* metadata;
-  std::string   path;
+  std::string path;
 
   ObsoleteFileInfo() noexcept : metadata(nullptr) {}
   ObsoleteFileInfo(FileMetaData* f, const std::string& file_path)
@@ -749,9 +745,8 @@ struct ObsoleteFileInfo {
   ObsoleteFileInfo(const ObsoleteFileInfo&) = delete;
   ObsoleteFileInfo& operator=(const ObsoleteFileInfo&) = delete;
 
-  ObsoleteFileInfo(ObsoleteFileInfo&& rhs) noexcept :
-    ObsoleteFileInfo() {
-      *this = std::move(rhs);
+  ObsoleteFileInfo(ObsoleteFileInfo&& rhs) noexcept : ObsoleteFileInfo() {
+    *this = std::move(rhs);
   }
 
   ObsoleteFileInfo& operator=(ObsoleteFileInfo&& rhs) noexcept {
@@ -1018,7 +1013,7 @@ class VersionSet {
                             FileMetaData** metadata, ColumnFamilyData** cfd);
 
   // This function doesn't support leveldb SST filenames
-  void GetLiveFilesMetaData(std::vector<LiveFileMetaData> *metadata);
+  void GetLiveFilesMetaData(std::vector<LiveFileMetaData>* metadata);
 
   void GetObsoleteFiles(std::vector<ObsoleteFileInfo>* files,
                         std::vector<std::string>* manifest_filenames,

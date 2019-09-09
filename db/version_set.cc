@@ -8,6 +8,7 @@
 // found in the LICENSE file. See the AUTHORS file for names of contributors.
 
 #include "db/version_set.h"
+#include <iostream>
 
 #include <stdio.h>
 #include <algorithm>
@@ -1740,8 +1741,8 @@ void Version::Get(const ReadOptions& read_options, const LookupKey& k,
       storage_info_.num_non_empty_levels_, &storage_info_.file_indexer_,
       user_comparator(), internal_comparator());
   FdWithKeyRange* f = fp.GetNextFile();
-
   while (f != nullptr) {
+    f->file_metadata->fd.read_count++;
     if (*max_covering_tombstone_seq > 0) {
       // The remaining files we look at will only contain covered keys, so we
       // stop here.
@@ -1794,6 +1795,7 @@ void Version::Get(const ReadOptions& read_options, const LookupKey& k,
         }
         PERF_COUNTER_BY_LEVEL_ADD(user_key_return_count, 1,
                                   fp.GetHitFileLevel());
+        f->file_metadata->fd.hit_count++;
         return;
       case GetContext::kDeleted:
         // Use empty error message for speed
@@ -1840,12 +1842,12 @@ void Version::Get(const ReadOptions& read_options, const LookupKey& k,
     }
     *status = Status::NotFound(); // Use an empty error message for speed
   }
+  
 }
 
 void Version::MultiGet(const ReadOptions& read_options, MultiGetRange* range,
                        ReadCallback* callback, bool* is_blob) {
   PinnedIteratorsManager pinned_iters_mgr;
-
   // Pin blocks that we read to hold merge operands
   if (merge_operator_) {
     pinned_iters_mgr.StartPinning();

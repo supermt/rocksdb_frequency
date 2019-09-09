@@ -2412,6 +2412,7 @@ Status DBImpl::BackgroundCompaction(bool* made_progress,
 
   bool is_manual = (manual_compaction != nullptr);
   std::unique_ptr<Compaction> c;
+
   if (prepicked_compaction != nullptr &&
       prepicked_compaction->compaction != nullptr) {
     c.reset(prepicked_compaction->compaction);
@@ -2546,7 +2547,7 @@ Status DBImpl::BackgroundCompaction(bool* made_progress,
       if (c != nullptr) {
         bool enough_room = EnoughRoomForCompaction(
             cfd, *(c->inputs()), &sfm_reserved_compact_space, log_buffer);
-
+    
         if (!enough_room) {
           // Then don't do the compaction
           c->ReleaseCompactionFiles(status);

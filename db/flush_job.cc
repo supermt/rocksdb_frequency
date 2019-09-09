@@ -255,12 +255,26 @@ Status FlushJob::Run(LogsWithPrepTracker* prep_tracker,
   stream << "output_compression"
          << CompressionTypeToString(output_compression_);
   stream << "lsm_state";
-  stream.StartArray();
   auto vstorage = cfd_->current()->storage_info();
+ stream.StartObject();
   for (int level = 0; level < vstorage->num_levels(); ++level) {
-    stream << vstorage->NumLevelFiles(level);
+    stream << "level " + std::to_string(level);
+    stream.StartArray();
+    for (const auto& file : vstorage->GetTheHierarchy()[level]) {
+      std::string file_info = "{" + std::to_string(file->fd.GetPathId()) + "," +
+                              std::to_string(file->fd.GetNumber()) + "," +
+                              std::to_string(file->fd.read_count) + "," +
+                              std::to_string(file->fd.hit_count)+"}";
+    stream << file_info;
+    }
+    stream.EndArray();
   }
-  stream.EndArray();
+  stream.EndObject();
+
+  // for (int level = 0; level < vstorage->num_levels(); ++level) {
+  //   stream << vstorage->NumLevelFiles(level);
+  // }
+  // stream.EndArray();
   stream << "immutable_memtables" << cfd_->imm()->NumNotFlushed();
 
   if (measure_io_stats_) {

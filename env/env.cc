@@ -23,11 +23,11 @@ namespace rocksdb {
 
 Env::~Env() {
 }
-
 Status Env::NewLogger(const std::string& fname,
                       std::shared_ptr<Logger>* result) {
   return NewEnvLogger(fname, this, result);
 }
+
 
 Status Env::LoadEnv(const std::string& value, Env** result) {
   Env* env = *result;

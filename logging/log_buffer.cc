@@ -81,7 +81,7 @@ void LogToBuffer(LogBuffer* log_buffer, size_t max_log_size, const char* format,
 }
 
 void LogToBuffer(LogBuffer* log_buffer, const char* format, ...) {
-  const size_t kDefaultMaxLogSize = 512;
+  const size_t kDefaultMaxLogSize = 32*4*1024; // 8 for each table,
   if (log_buffer != nullptr) {
     va_list ap;
     va_start(ap, format);

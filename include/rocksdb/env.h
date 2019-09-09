@@ -60,6 +60,7 @@ struct ThreadStatus;
 
 const size_t kDefaultPageSize = 4 * 1024;
 
+
 // Options while opening a file to read/write
 struct EnvOptions {
   // Construct with default Options
@@ -140,7 +141,7 @@ class Env {
     uint64_t size_bytes;
   };
 
-  Env() : thread_status_updater_(nullptr) {}
+  Env() : thread_status_updater_(nullptr){}
 
   virtual ~Env();
 

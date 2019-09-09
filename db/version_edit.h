@@ -38,6 +38,8 @@ struct FileDescriptor {
   uint64_t file_size;  // File size in bytes
   SequenceNumber smallest_seqno;  // The smallest seqno in this file
   SequenceNumber largest_seqno;   // The largest seqno in this file
+  uint32_t read_count = 0;
+  uint32_t hit_count = 0;
 
   FileDescriptor() : FileDescriptor(0, 0, 0) {}
 

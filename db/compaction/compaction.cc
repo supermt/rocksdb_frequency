@@ -112,6 +112,41 @@ void Compaction::GetBoundaryKeys(
     }
   }
 }
+// add by jinghuan
+std::string GetStorageHierarchyString(VersionStorageInfo* vstorage) {
+  //    std::string result = "";
+
+  std::ostringstream stringStream;
+  // list the files here
+
+  for (int l = 0; l < vstorage->num_levels(); l++) {
+    const std::vector<FileMetaData*>& files = vstorage->GetTheHierarchy()[l];
+    stringStream << "Level " << l << " has " << files.size() << " files"
+                 << "\n";
+  }
+  return stringStream.str();
+};
+
+// add by jinghuan
+std::string GetStorageFileString(VersionStorageInfo* vstorage) {
+  //    std::string result = "";
+
+  std::ostringstream stringStream;
+  // list the files here
+
+  for (int l = 0; l < vstorage->num_levels(); l++) {
+    const std::vector<FileMetaData*>& files = vstorage->GetTheHierarchy()[l];
+    stringStream << "Level " << l << " has " << files.size() << " files"
+                 << "\n";
+    for (const auto& file : files) {
+      stringStream << file->fd.GetPathId() << ",F " << file->fd.GetNumber()
+                   << ",R " << file->fd.read_count << ",W "
+                   << file->fd.hit_count << "\t";
+    }
+    stringStream << "\n";
+  }
+  return stringStream.str();
+};
 
 std::vector<CompactionInputFiles> Compaction::PopulateWithAtomicBoundaries(
     VersionStorageInfo* vstorage, std::vector<CompactionInputFiles> inputs) {
@@ -242,6 +277,11 @@ Compaction::Compaction(VersionStorageInfo* vstorage,
   if (is_manual_compaction_) {
     compaction_reason_ = CompactionReason::kManualCompaction;
   }
+  // add by jinghuan
+
+  std::string compaction_tree = GetStorageFileString(vstorage);
+  
+
   if (max_subcompactions_ == 0) {
     max_subcompactions_ = immutable_cf_options_.max_subcompactions;
   }
@@ -323,8 +363,8 @@ bool Compaction::IsTrivialMove() const {
   }
 
   if (!(start_level_ != output_level_ && num_input_levels() == 1 &&
-          input(0, 0)->fd.GetPathId() == output_path_id() &&
-          InputCompressionMatchesOutput())) {
+        input(0, 0)->fd.GetPathId() == output_path_id() &&
+        InputCompressionMatchesOutput())) {
     return false;
   }
 
