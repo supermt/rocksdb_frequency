@@ -408,6 +408,9 @@ uint32_t LevelCompactionBuilder::GetPathId(
   uint32_t p = 0;
   assert(!ioptions.cf_paths.empty());
   assert(mutable_cf_options.max_bytes_for_level_base > 0);
+  if (mutable_cf_options.max_bytes_for_level_base <= 0) {
+    return 0;
+  }
   p = level / 2;
   uint32_t max_path = ioptions.cf_paths.size() - 1;
   return p >= max_path ? max_path : p;
