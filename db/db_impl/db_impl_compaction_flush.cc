@@ -2544,6 +2544,7 @@ Status DBImpl::BackgroundCompaction(bool* made_progress,
       c.reset(cfd->PickCompaction(*mutable_cf_options, log_buffer));
       TEST_SYNC_POINT("DBImpl::BackgroundCompaction():AfterPickCompaction");
 
+      // std::cout << "compaction built, into "<< c->output_path_id() << std::endl;
       if (c != nullptr) {
         bool enough_room = EnoughRoomForCompaction(
             cfd, *(c->inputs()), &sfm_reserved_compact_space, log_buffer);

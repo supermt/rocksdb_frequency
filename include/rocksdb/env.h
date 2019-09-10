@@ -17,6 +17,7 @@
 #pragma once
 
 #include <stdint.h>
+#include <iostream>
 #include <cstdarg>
 #include <functional>
 #include <limits>

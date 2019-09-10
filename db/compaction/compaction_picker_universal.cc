@@ -429,11 +429,12 @@ uint32_t UniversalCompactionPicker::GetPathId(
     uint64_t target_size = ioptions.cf_paths[p].target_size;
     if (target_size > file_size &&
         accumulated_size + (target_size - file_size) > future_size) {
+          p = ioptions.cf_paths.size() - 1;
       return p;
     }
     accumulated_size += target_size;
   }
-  return p;
+  return ioptions.cf_paths.size() - 1;
 }
 
 //

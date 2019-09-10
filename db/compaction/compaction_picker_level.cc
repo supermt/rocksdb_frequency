@@ -407,48 +407,56 @@ uint32_t LevelCompactionBuilder::GetPathId(
     const MutableCFOptions& mutable_cf_options, int level) {
   uint32_t p = 0;
   assert(!ioptions.cf_paths.empty());
+  assert(mutable_cf_options.max_bytes_for_level_base > 0);
+  p = level / 2;
+  uint32_t max_path = ioptions.cf_paths.size() - 1;
+  return p >= max_path ? max_path : p;
+  // // size remaining in the most recent path
+  // uint64_t current_path_size = ioptions.cf_paths[0].target_size;
+  // uint64_t level_size;
+  // int cur_level = 0;
 
-  // size remaining in the most recent path
-  uint64_t current_path_size = ioptions.cf_paths[0].target_size;
+  // // max_bytes_for_level_base denotes L1 size.
+  // // We estimate L0 size to be the same as L1.
+  // level_size = mutable_cf_options.max_bytes_for_level_base;
 
-  uint64_t level_size;
-  int cur_level = 0;
+  // // Last path is the fallback
+  // while (p < ioptions.cf_paths.size() - 1) {
+  //   std::cout << "current size " << current_path_size << std::endl;
+  //   if (level_size <= current_path_size) {
+  //     if (cur_level == level) {
+  //       // Does desired level fit in this path?
+  //       return p;
+  //     } else {
+  //       current_path_size -= level_size;
+  //       if (cur_level > 0) {
+  //         if (ioptions.level_compaction_dynamic_level_bytes) {
+  //           // Currently, level_compaction_dynamic_level_bytes is ignored
+  //           when
+  //           // multiple db paths are specified. https://github.com/facebook/
+  //           // rocksdb/blob/master/db/column_family.cc.
+  //           // Still, adding this check to avoid accidentally using
+  //           // max_bytes_for_level_multiplier_additional
+  //           level_size = static_cast<uint64_t>(
+  //               level_size *
+  //               mutable_cf_options.max_bytes_for_level_multiplier);
+  //         } else {
+  //           level_size = static_cast<uint64_t>(
+  //               level_size *
+  //               mutable_cf_options.max_bytes_for_level_multiplier *
+  //               mutable_cf_options.MaxBytesMultiplerAdditional(cur_level));
+  //         }
+  //       }
+  //       cur_level++;
+  //       continue;
+  //     }
+  //   }
+  //   p++;
+  //   current_path_size = ioptions.cf_paths[p].target_size;
+  // }
+  // return p;
 
-  // max_bytes_for_level_base denotes L1 size.
-  // We estimate L0 size to be the same as L1.
-  level_size = mutable_cf_options.max_bytes_for_level_base;
-
-  // Last path is the fallback
-  while (p < ioptions.cf_paths.size() - 1) {
-    if (level_size <= current_path_size) {
-      if (cur_level == level) {
-        // Does desired level fit in this path?
-        return p;
-      } else {
-        current_path_size -= level_size;
-        if (cur_level > 0) {
-          if (ioptions.level_compaction_dynamic_level_bytes) {
-            // Currently, level_compaction_dynamic_level_bytes is ignored when
-            // multiple db paths are specified. https://github.com/facebook/
-            // rocksdb/blob/master/db/column_family.cc.
-            // Still, adding this check to avoid accidentally using
-            // max_bytes_for_level_multiplier_additional
-            level_size = static_cast<uint64_t>(
-                level_size * mutable_cf_options.max_bytes_for_level_multiplier);
-          } else {
-            level_size = static_cast<uint64_t>(
-                level_size * mutable_cf_options.max_bytes_for_level_multiplier *
-                mutable_cf_options.MaxBytesMultiplerAdditional(cur_level));
-          }
-        }
-        cur_level++;
-        continue;
-      }
-    }
-    p++;
-    current_path_size = ioptions.cf_paths[p].target_size;
-  }
-  return p;
+  // too complex, just skip 2 level in one path
 }
 
 bool LevelCompactionBuilder::PickFileToCompact() {

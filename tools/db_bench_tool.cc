@@ -3393,13 +3393,13 @@ class Benchmark {
           new WriteBufferManager(FLAGS_db_write_buffer_size, cache_));
     }
 
-    // DbPath flash =
-    // DbPath("/home/supermt/rocksdb_nvme", 1l * 1024 * 1024 * 1024);
-    // DbPath hdd = DbPath("/media/supermt/hdd/dataset", 200l * 1024 * 1024 * 1024);
-    // if (options.db_paths.size()!=0){
-    // options.db_paths.push_back(flash);
-    // options.db_paths.push_back(hdd);
-    // }
+    DbPath flash =
+    DbPath("/home/supermt/rocksdb_nvme", 1l * 1024 * 1024 * 1024);
+    DbPath hdd = DbPath("/media/supermt/hdd/dataset", 200l * 1024 * 1024 * 1024);
+    if (options.db_paths.size()!=1){
+    options.db_paths.push_back(flash);
+    options.db_paths.push_back(hdd);
+    }
 
     options.write_buffer_size = FLAGS_write_buffer_size;
     options.max_write_buffer_number = FLAGS_max_write_buffer_number;
