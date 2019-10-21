@@ -119,6 +119,10 @@ struct BlockBasedTableOptions {
     // slice, and you need to call Valid()/status() afterwards.
     // TODO(kolmike): Fix it.
     kBinarySearchWithFirstKey = 0x03,
+
+    // a machine learning based index structure, which can be stored as a bounch
+    // of linear functions.
+    kMachineLearningPredictioinSearch = 0x04,
   };
 
   IndexType index_type = kBinarySearch;
@@ -127,7 +131,7 @@ struct BlockBasedTableOptions {
   enum DataBlockIndexType : char {
     kDataBlockBinarySearch = 0,   // traditional block type
     kDataBlockBinaryAndHash = 1,  // additional hash index
-    kDataMachineLearning = 2
+    kDataMachineLearning = 2 // add by jinghuan
   };
 
   DataBlockIndexType data_block_index_type = kDataBlockBinarySearch;

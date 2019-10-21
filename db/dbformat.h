@@ -205,7 +205,10 @@ class InternalKeyComparator
   }
 
   int Compare(const InternalKey& a, const InternalKey& b) const;
+  int Distance(const InternalKey& a, const InternalKey& b) const;
   int Compare(const ParsedInternalKey& a, const ParsedInternalKey& b) const;
+  int Distance(const ParsedInternalKey& a, const ParsedInternalKey& b) const;
+
   virtual const Comparator* GetRootComparator() const override {
     return user_comparator_.GetRootComparator();
   }
@@ -277,6 +280,16 @@ class InternalKey {
 inline int InternalKeyComparator::Compare(const InternalKey& a,
                                           const InternalKey& b) const {
   return Compare(a.Encode(), b.Encode());
+}
+
+inline int InternalKeyComparator::Distance(const InternalKey& a,
+                                           const InternalKey& b) const {
+  return LevenshteinDistanceCalculator::Calculate(a.Encode(), b.Encode());
+}
+
+inline int InternalKeyComparator::Distance(const ParsedInternalKey& a,
+                                           const ParsedInternalKey& b) const {
+  return LevenshteinDistanceCalculator::Calculate(a.user_key, b.user_key);
 }
 
 inline bool ParseInternalKey(const Slice& internal_key,

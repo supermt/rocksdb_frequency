@@ -1233,6 +1233,9 @@ DEFINE_bool(use_hash_search, false,
             "if use kHashSearch "
             "instead of kBinarySearch. "
             "This is valid if only we use BlockTable");
+
+DEFINE_bool(use_machine_learning_search, false,
+            "use the machine learning style.");
 DEFINE_bool(use_block_based_filter, false,
             "if use kBlockBasedFilter "
             "instead of kFullFilter for filter block. "
@@ -1718,7 +1721,9 @@ class Stats {
 
     std::string memory_log = "MEMORY_USAGE" + std::to_string(id);
     memory_foot_print = fopen(memory_log.c_str(), "w");
-    fprintf(memory_foot_print, "index_size,memtable_size,sst_size,block_cache/block_cache_capacity,block_cache_pinned_usage\n");
+    fprintf(memory_foot_print,
+            "index_size,memtable_size,sst_size,block_cache/"
+            "block_cache_capacity,block_cache_pinned_usage\n");
     fflush(memory_foot_print);
   }
 
@@ -3591,6 +3596,8 @@ class Benchmark {
           exit(1);
         }
         block_based_options.index_type = BlockBasedTableOptions::kHashSearch;
+      } else if (FLAGS_use_machine_learning_search) {
+        block_based_options.index_type = BlockBasedTableOptions::kMachineLearningPredictioinSearch;
       } else {
         block_based_options.index_type = BlockBasedTableOptions::kBinarySearch;
       }

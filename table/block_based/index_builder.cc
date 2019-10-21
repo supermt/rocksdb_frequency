@@ -12,9 +12,9 @@
 #include <assert.h>
 #include <cinttypes>
 
+#include <iostream>
 #include <list>
 #include <string>
-
 #include "rocksdb/comparator.h"
 #include "rocksdb/flush_block_policy.h"
 #include "table/block_based/partitioned_filter_block.h"
@@ -54,9 +54,10 @@ IndexBuilder* IndexBuilder::CreateIndexBuilder(
           table_opt.format_version, use_value_delta_encoding,
           table_opt.index_shortening, /* include_first_key */ true);
     } break;
-    default: {
-      assert(!"Do not recognize the index type ");
+    case BlockBasedTableOptions::kMachineLearningPredictioinSearch: {
+      result = new LIFIndexBuilder(comparator, table_opt);
     } break;
+    default: { assert(!"Do not recognize the index type "); } break;
   }
   return result;
 }
@@ -216,4 +217,89 @@ Status PartitionedIndexBuilder::Finish(
 }
 
 size_t PartitionedIndexBuilder::NumPartitions() const { return partition_cnt_; }
+
+// LIF index builder part
+
+LIFIndexBuilder::~LIFIndexBuilder() {}
+
+void LIFIndexBuilder::AddIndexEntry(std::string* last_key_in_current_block,
+                                    const Slice* first_key_in_next_block,
+                                    const BlockHandle& block_handle) {
+  // if (first_key_in_next_block != nullptr) {
+  //   // int distance = KeyDistanceCalculator::Calculate(
+  //   //     ExtractUserKey(*last_key_in_current_block).ToString(true),
+  //   //     ExtractUserKey(*first_key_in_next_block).ToString(true));
+  // }
+
+  // if (first_key_in_next_block != nullptr) {
+  //   if (shortening_mode_ !=
+  //       BlockBasedTableOptions::IndexShorteningMode::kNoShortening) {
+  //     comparator_->FindShortestSeparator(last_key_in_current_block,
+  //                                        *first_key_in_next_block);
+  //   }
+  //   if (!seperator_is_key_plus_seq_ &&
+  //       comparator_->user_comparator()->Compare(
+  //           ExtractUserKey(*last_key_in_current_block),
+  //           ExtractUserKey(*first_key_in_next_block)) == 0) {
+  //     seperator_is_key_plus_seq_ = true;
+  //   }
+  // } else {
+  //   if (shortening_mode_ == BlockBasedTableOptions::IndexShorteningMode::
+  //                               kShortenSeparatorsAndSuccessor) {
+  //     comparator_->FindShortSuccessor(last_key_in_current_block);
+  //   }
+  // }
+  // auto sep = Slice(*last_key_in_current_block);
+
+  // assert(!include_first_key_ || !current_block_first_internal_key_.empty());
+  // IndexValue entry(block_handle, current_block_first_internal_key_);
+  // std::string encoded_entry;
+  // std::string delta_encoded_entry;
+  // entry.EncodeTo(&encoded_entry, include_first_key_, nullptr);
+  // if (use_value_delta_encoding_ && !last_encoded_handle_.IsNull()) {
+  //   entry.EncodeTo(&delta_encoded_entry, include_first_key_,
+  //                  &last_encoded_handle_);
+  // } else {
+  //   // If it's the first block, or delta encoding is disabled,
+  //   // BlockBuilder::Add() below won't use delta-encoded slice.
+  // }
+  // last_encoded_handle_ = block_handle;
+  // const Slice delta_encoded_entry_slice(delta_encoded_entry);
+  // index_block_builder_.Add(sep, encoded_entry, &delta_encoded_entry_slice);
+  // if (!seperator_is_key_plus_seq_) {
+  //   index_block_builder_without_seq_.Add(ExtractUserKey(sep), encoded_entry,
+  //                                        &delta_encoded_entry_slice);
+  // }
+  // current_block_first_internal_key_.clear();
+
+  entries_.push_back({*last_key_in_current_block,
+                      first_key_in_next_block->ToString(true), 0.0, 0.0});
+
+  std::string block_str;
+  block_handle.EncodeTo(&block_str);
+}
+
+Status LIFIndexBuilder::Finish(IndexBlocks* index_blocks,
+                               const BlockHandle& last_partition_block_handle) {
+  if (seperator_is_key_plus_seq_) {
+    index_blocks->index_block_contents = index_block_builder_.Finish();
+  } else {
+    index_blocks->index_block_contents =
+        index_block_builder_without_seq_.Finish();
+  }
+
+  // check the entries
+  std::cout << "reach the index builder " << entries_.size() << std::endl;
+
+  for (auto entry : entries_) {
+    std::cout << entry.start_key << " " << entry.end_key << std::endl;
+  }
+
+  std::string handle_encoding;
+  PutVarsignedint64(&handle_encoding, entries_.size());
+  PutVarsignedint64(&handle_encoding, last_partition_block_handle.size());
+  index_size_ = index_blocks->index_block_contents.size();
+  return Status::OK();
+}
+// end for LIF index
 }  // namespace rocksdb

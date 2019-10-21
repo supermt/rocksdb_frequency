@@ -8,6 +8,7 @@
 // found in the LICENSE file. See the AUTHORS file for names of contributors.
 
 #include "table/block_based/block_based_table_builder.h"
+#include <iostream>
 
 #include <assert.h>
 #include <stdio.h>
@@ -411,6 +412,8 @@ struct BlockBasedTableBuilder::Rep {
           table_options);
       index_builder.reset(p_index_builder_);
     } else {
+      // add by jinghuan
+      // detecting the index_type
       index_builder.reset(IndexBuilder::CreateIndexBuilder(
           table_options.index_type, &internal_comparator,
           &this->internal_prefix_transform, use_delta_encoding_for_index_values,
@@ -499,14 +502,19 @@ void BlockBasedTableBuilder::Add(const Slice& key, const Slice& value) {
   if (!ok()) return;
   ValueType value_type = ExtractValueType(key);
   if (IsValueType(value_type)) {
-#ifndef NDEBUG
-    if (r->props.num_entries > r->props.num_range_deletions) {
-      assert(r->internal_comparator.Compare(key, Slice(r->last_key)) > 0);
-    }
-#endif  // NDEBUG
-
     auto should_flush = r->flush_block_policy->Update(key, value);
+    ParsedInternalKey reuslt;
+    ParseInternalKey(key, &reuslt);
+
+    // std::cout << "Adding HEX entry " << reuslt.user_key.ToString(true)
+    //           << std::endl;
+
     if (should_flush) {
+      // std::cout << "adding entry: " << ExtractUserKey(key).data() <<
+      // std::endl; std::cout << "flushing blocks, with k-v:" <<
+      // key.ToString(false)
+      //           << std::endl;
+      // std::cout << "Flush " << reuslt.user_key.ToString(true) << std::endl;
       assert(!r->data_block.empty());
       Flush();
 
@@ -595,6 +603,9 @@ void BlockBasedTableBuilder::WriteBlock(const Slice& raw_block_contents,
   //    block_data: uint8[n]
   //    type: uint8
   //    crc: uint32
+  // std::cout << "Writing the block, with size of: " <<
+  // raw_block_contents.size_
+  //           << std::endl;
   assert(ok());
   Rep* r = rep_;
 
@@ -875,6 +886,7 @@ void BlockBasedTableBuilder::WriteIndexBlock(
     for (const auto& item : index_blocks.meta_blocks) {
       BlockHandle block_handle;
       WriteBlock(item.second, &block_handle, false /* is_data_block */);
+      std::cout << "Writing index block" << std::endl;
       if (!ok()) {
         break;
       }
@@ -986,6 +998,7 @@ void BlockBasedTableBuilder::WritePropertiesBlock(
           &props_block_size);
     }
 #endif  // !NDEBUG
+
     meta_index_builder->Add(kPropertiesBlock, properties_block_handle);
   }
 }
@@ -1063,9 +1076,8 @@ void BlockBasedTableBuilder::EnterUnbuffered() {
   std::vector<size_t> compression_dict_sample_lens;
   if (!r->data_block_and_keys_buffers.empty()) {
     while (compression_dict_samples.size() < kSampleBytes) {
-      size_t rand_idx =
-          static_cast<size_t>(
-              generator.Uniform(r->data_block_and_keys_buffers.size()));
+      size_t rand_idx = static_cast<size_t>(
+          generator.Uniform(r->data_block_and_keys_buffers.size()));
       size_t copy_len =
           std::min(kSampleBytes - compression_dict_samples.size(),
                    r->data_block_and_keys_buffers[rand_idx].first.size());

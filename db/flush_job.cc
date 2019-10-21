@@ -51,7 +51,7 @@
 
 namespace rocksdb {
 
-const char* GetFlushReasonString (FlushReason flush_reason) {
+const char* GetFlushReasonString(FlushReason flush_reason) {
   switch (flush_reason) {
     case FlushReason::kOthers:
       return "Other Reasons";
@@ -129,17 +129,14 @@ FlushJob::FlushJob(const std::string& dbname, ColumnFamilyData* cfd,
   TEST_SYNC_POINT("FlushJob::FlushJob()");
 }
 
-FlushJob::~FlushJob() {
-  ThreadStatusUtil::ResetThreadStatus();
-}
+FlushJob::~FlushJob() { ThreadStatusUtil::ResetThreadStatus(); }
 
 void FlushJob::ReportStartedFlush() {
   ThreadStatusUtil::SetColumnFamily(cfd_, cfd_->ioptions()->env,
                                     db_options_.enable_thread_tracking);
   ThreadStatusUtil::SetThreadOperation(ThreadStatus::OP_FLUSH);
-  ThreadStatusUtil::SetThreadOperationProperty(
-      ThreadStatus::COMPACTION_JOB_ID,
-      job_context_->job_id);
+  ThreadStatusUtil::SetThreadOperationProperty(ThreadStatus::COMPACTION_JOB_ID,
+                                               job_context_->job_id);
   IOSTATS_RESET(bytes_written);
 }
 
@@ -149,8 +146,7 @@ void FlushJob::ReportFlushInputSize(const autovector<MemTable*>& mems) {
     input_size += mem->ApproximateMemoryUsage();
   }
   ThreadStatusUtil::IncreaseThreadOperationProperty(
-      ThreadStatus::FLUSH_BYTES_MEMTABLES,
-      input_size);
+      ThreadStatus::FLUSH_BYTES_MEMTABLES, input_size);
 }
 
 void FlushJob::RecordFlushIOStats() {
@@ -195,8 +191,7 @@ Status FlushJob::Run(LogsWithPrepTracker* prep_tracker,
   TEST_SYNC_POINT("FlushJob::Start");
   db_mutex_->AssertHeld();
   assert(pick_memtable_called);
-  AutoThreadOperationStageUpdater stage_run(
-      ThreadStatus::STAGE_FLUSH_RUN);
+  AutoThreadOperationStageUpdater stage_run(ThreadStatus::STAGE_FLUSH_RUN);
   if (mems_.empty()) {
     ROCKS_LOG_BUFFER(log_buffer_, "[%s] Nothing in memtable to flush",
                      cfd_->GetName().c_str());
@@ -256,7 +251,7 @@ Status FlushJob::Run(LogsWithPrepTracker* prep_tracker,
          << CompressionTypeToString(output_compression_);
   stream << "lsm_state";
   auto vstorage = cfd_->current()->storage_info();
- stream.StartObject();
+  stream.StartObject();
   for (int level = 0; level < vstorage->num_levels(); ++level) {
     stream << "level " + std::to_string(level);
     stream.StartArray();
@@ -264,8 +259,8 @@ Status FlushJob::Run(LogsWithPrepTracker* prep_tracker,
       std::string file_info = "{" + std::to_string(file->fd.GetPathId()) + "," +
                               std::to_string(file->fd.GetNumber()) + "," +
                               std::to_string(file->fd.read_count) + "," +
-                              std::to_string(file->fd.hit_count)+"}";
-    stream << file_info;
+                              std::to_string(file->fd.hit_count) + "}";
+      stream << file_info;
     }
     stream.EndArray();
   }
@@ -376,8 +371,7 @@ Status FlushJob::WriteLevel0Table() {
       }
       const uint64_t current_time = static_cast<uint64_t>(_current_time);
 
-      uint64_t oldest_key_time =
-          mems_.front()->ApproximateOldestKeyTime();
+      uint64_t oldest_key_time = mems_.front()->ApproximateOldestKeyTime();
 
       s = BuildTable(
           dbname_, db_options_.env, *cfd_->ioptions(), mutable_cf_options_,

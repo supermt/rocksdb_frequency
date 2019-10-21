@@ -32,6 +32,7 @@
 // restarts[i] contains the offset within the block of the ith restart point.
 
 #include "table/block_based/block_builder.h"
+#include <boost/stacktrace.hpp>
 
 #include <assert.h>
 #include <algorithm>

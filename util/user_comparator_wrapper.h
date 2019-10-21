@@ -11,15 +11,46 @@
 #include "monitoring/perf_context_imp.h"
 #include "rocksdb/comparator.h"
 
-namespace rocksdb {
+#define MIN(x, y) ((x) < (y) ? (x) : (y))
+#define MAX(x, y) ((x) > (y) ? (x) : (y))
 
+namespace rocksdb {
+class LevenshteinDistanceCalculator {
+ public:
+  static int Calculate(const Slice& a, const Slice& b) {
+    int i, j, l1, l2, t, track;
+    int dist_buffer_len = MAX(a.size(), b.size());
+    int dist[dist_buffer_len][dist_buffer_len];
+    l1 = a.size_;
+    l2 = b.size_;
+
+    for (i = 0; i <= l1; i++) {
+      dist[0][i] = i;
+    }
+    for (j = 0; j <= l2; j++) {
+      dist[j][0] = j;
+    }
+    for (j = 1; j <= l1; j++) {
+      for (i = 1; i <= l2; i++) {
+        if (a.data_[i - 1] == a.data_[j - 1]) {
+          track = 0;
+        } else {
+          track = 1;
+        }
+        t = MIN((dist[i - 1][j] + 1), (dist[i][j - 1] + 1));
+        dist[i][j] = MIN(t, (dist[i - 1][j - 1] + track));
+      }
+    }
+    return (a.compare(b)) * (dist[l2][l1]);
+  }
+};
 // Wrapper of user comparator, with auto increment to
 // perf_context.user_key_comparison_count.
 class UserComparatorWrapper final : public Comparator {
  public:
   explicit UserComparatorWrapper(const Comparator* const user_cmp)
       : user_comparator_(user_cmp) {}
-  
+
   ~UserComparatorWrapper() = default;
 
   const Comparator* user_comparator() const { return user_comparator_; }
@@ -58,8 +89,11 @@ class UserComparatorWrapper final : public Comparator {
     return user_comparator_->CanKeysWithDifferentByteContentsBeEqual();
   }
 
+  int Distance(const Slice& a, const Slice& b) {
+    return LevenshteinDistanceCalculator::Calculate(a, b);
+  }
+
  private:
   const Comparator* user_comparator_;
 };
-
 }  // namespace rocksdb

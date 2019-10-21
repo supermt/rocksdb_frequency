@@ -10,6 +10,7 @@
 #include "table/format.h"
 
 #include <cinttypes>
+#include <iostream>
 #include <string>
 
 #include "block_fetcher.h"

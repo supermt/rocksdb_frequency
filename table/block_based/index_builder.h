@@ -108,6 +108,175 @@ class IndexBuilder {
   // Set after ::Finish is called
   size_t index_size_ = 0;
 };
+class KeyDistanceCalculator {
+ public:
+  class LevenshteinDistance {
+   public:
+    static size_t Calculate(const std::string& s1, const std::string& s2) {
+      const size_t m(s1.size());
+      const size_t n(s2.size());
+
+      if (m == 0) return n;
+      if (n == 0) return m;
+
+      size_t* costs = new size_t[n + 1];
+      for (size_t k = 0; k <= n; k++) costs[k] = k;
+
+      size_t i = 0;
+      for (std::string::const_iterator it1 = s1.begin(); it1 != s1.end();
+           ++it1, ++i) {
+        costs[0] = i + 1;
+        size_t corner = i;
+
+        size_t j = 0;
+        for (std::string::const_iterator it2 = s2.begin(); it2 != s2.end();
+             ++it2, ++j) {
+          size_t upper = costs[j + 1];
+          if (*it1 == *it2) {
+            costs[j + 1] = corner;
+          } else {
+            size_t t(upper < corner ? upper : corner);
+            costs[j + 1] = (costs[j] < t ? costs[j] : t) + 1;
+          }
+
+          corner = upper;
+        }
+      }
+      size_t result = costs[n];
+      delete[] costs;
+
+      return result;
+    }
+    static size_t Calculate(const Slice& s1, const Slice& s2) {
+      const size_t m(s1.size());
+      const size_t n(s2.size());
+
+      if (m == 0) return n;
+      if (n == 0) return m;
+
+      size_t* costs = new size_t[n + 1];
+      for (size_t k = 0; k <= n; k++) costs[k] = k;
+
+      size_t i = 0;
+      for (i = 0; i < s1.size(); ++i) {
+        costs[0] = i + 1;
+        size_t corner = i;
+
+        size_t j = 0;
+        for (j = 0; j < s2.size(); ++j) {
+          size_t upper = costs[j + 1];
+          if (s1[i] == s2[j]) {
+            costs[j + 1] = corner;
+          } else {
+            size_t t(upper < corner ? upper : corner);
+            costs[j + 1] = (costs[j] < t ? costs[j] : t) + 1;
+          }
+          corner = upper;
+        }
+      }
+      size_t result = costs[n];
+      delete[] costs;
+
+      return result;
+    }
+  };
+
+  class char_vector {
+    int16_t* data_;
+    int length_;
+
+   public:
+    char_vector(int16_t* data, int length) {
+      length_ = length;
+      data_ = new int16_t[length];
+      memcpy(data_, data, length);
+    }
+    ~char_vector() { delete[] data_; }
+    int16_t& operator[](int i) { return data_[i]; }
+    char_vector(const char_vector& other) { operator=(other); }
+    char_vector& operator=(const char_vector& other) {
+      return *(new char_vector(other.data_, other.length_));
+    }
+    friend std::ostream& operator<<(std::ostream& out, const char_vector& c) {
+      for (int i = 0; i < c.length_; i++) {
+        out << c.data_[i] << " ";
+      }
+      return out;
+    }
+  };
+
+  class ByteWiseCalculator {
+   public:
+    static int Calculate(const Slice& s1, const Slice& s2) {
+      return s1.size() - s2.size();
+    }
+
+    static char_vector Differ(const Slice& larger, const Slice& smaller,
+                              int fill_len = 0) {
+      int total_size = larger.size();
+      if (fill_len != 0) {
+        total_size += fill_len;
+      }
+      int16_t* differ = new int16_t[total_size];
+      for (int i = 0; i < total_size; i++) {
+        differ[i] = larger[i] - smaller[i];
+      }
+      char_vector result = char_vector(differ, total_size);
+      delete[] differ;
+      return result;
+    }
+
+    // static int Slice2Int(){
+
+    // }
+  };
+};
+class LIFIndexBuilder : public IndexBuilder {
+ public:
+  explicit LIFIndexBuilder(const InternalKeyComparator* comparator,
+                           const BlockBasedTableOptions& table_opt)
+      : IndexBuilder(comparator),
+        cluster_counter_(0),
+        index_block_builder_(table_opt.index_block_restart_interval, false,
+                             false),
+        index_block_builder_without_seq_(table_opt.index_block_restart_interval,
+                                         false, false),
+        table_opt_(table_opt) {}
+
+  virtual ~LIFIndexBuilder();
+
+  virtual void OnKeyAdded(const Slice& key) override {
+    current_block_first_internal_key_.assign(key.data(), key.size());
+  }
+
+  using IndexBuilder::Finish;
+  virtual Status Finish(IndexBlocks* index_blocks,
+                        const BlockHandle& last_partition_block_handle);
+
+  virtual size_t IndexSize() const override { return index_size_; }
+
+  virtual void AddIndexEntry(std::string* last_key_in_current_block,
+                             const Slice* first_key_in_next_block,
+                             const BlockHandle& block_handle) override;
+
+ private:
+  struct LinearPartition {
+    // Entries in the LIF (Learned Index Framework) is a set of linear functions
+    std::string start_key;
+    std::string end_key;  // use a range to store
+    float slope;          // since its an linear function, the slope is needed
+    float divation;       // unlike the traditional index, LIF has its own bias,
+                          // store it as the reference
+  };
+  std::vector<LinearPartition> entries_;
+  int cluster_counter_;
+  BlockBuilder index_block_builder_;
+  BlockBuilder index_block_builder_without_seq_;
+  BlockBasedTableOptions table_opt_;
+  BlockHandle last_encoded_handle_ = BlockHandle::NullBlockHandle();
+  bool seperator_is_key_plus_seq_;
+  std::string current_block_first_internal_key_;
+};
 
 // This index builder builds space-efficient index block.
 //
@@ -150,6 +319,12 @@ class ShortenedIndexBuilder : public IndexBuilder {
                              const Slice* first_key_in_next_block,
                              const BlockHandle& block_handle) override {
     if (first_key_in_next_block != nullptr) {
+      KeyDistanceCalculator::char_vector temp =
+          KeyDistanceCalculator::ByteWiseCalculator::Differ(
+              Slice(last_key_in_current_block->c_str(),
+                    first_key_in_next_block->size()),
+              *first_key_in_next_block);
+      std::cout << temp << std::endl;
       if (shortening_mode_ !=
           BlockBasedTableOptions::IndexShorteningMode::kNoShortening) {
         comparator_->FindShortestSeparator(last_key_in_current_block,
@@ -188,7 +363,6 @@ class ShortenedIndexBuilder : public IndexBuilder {
       index_block_builder_without_seq_.Add(ExtractUserKey(sep), encoded_entry,
                                            &delta_encoded_entry_slice);
     }
-
     current_block_first_internal_key_.clear();
   }
 
@@ -223,6 +397,7 @@ class ShortenedIndexBuilder : public IndexBuilder {
   BlockBasedTableOptions::IndexShorteningMode shortening_mode_;
   BlockHandle last_encoded_handle_ = BlockHandle::NullBlockHandle();
   std::string current_block_first_internal_key_;
+  Slice last_key_;
 };
 
 // HashIndexBuilder contains a binary-searchable primary index and the

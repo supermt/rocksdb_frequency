@@ -58,4 +58,20 @@ class FlushBlockBySizePolicyFactory : public FlushBlockPolicyFactory {
       const BlockBuilder& data_block_builder);
 };
 
+class FlushBlockByMachineLearningFactory : public FlushBlockPolicyFactory {
+ public:
+  FlushBlockByMachineLearningFactory() {}
+  const char* Name() const override {
+    return "FlushBlockByMachineLearningFactory";
+  }
+
+  FlushBlockPolicy* NewFlushBlockPolicy(
+      const BlockBasedTableOptions& table_options,
+      const BlockBuilder& data_block_builder) const override;
+
+  static FlushBlockPolicy* NewFlushBlockPolicy(
+      const uint64_t size, const int deviation,
+      const BlockBuilder& data_block_builder);
+};
+
 }  // namespace rocksdb
