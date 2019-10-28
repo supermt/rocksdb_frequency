@@ -211,8 +211,8 @@ class KeyDistanceCalculator {
       return s1.size() - s2.size();
     }
 
-    static char_vector Differ(const Slice& larger, const Slice& smaller,
-                              int fill_len = 0) {
+    static char_vector Differ(const std::string& larger,
+                              const std::string& smaller, int fill_len = 0) {
       int total_size = larger.size();
       if (fill_len != 0) {
         total_size += fill_len;
@@ -220,6 +220,9 @@ class KeyDistanceCalculator {
       int16_t* differ = new int16_t[total_size];
       for (int i = 0; i < total_size; i++) {
         differ[i] = larger[i] - smaller[i];
+        if (differ[i] > 127 || differ[i] < -127) {
+          std::cout << (int)larger[i] << " " << (int)smaller[i] << std::endl;
+        }
       }
       char_vector result = char_vector(differ, total_size);
       delete[] differ;
@@ -245,9 +248,7 @@ class LIFIndexBuilder : public IndexBuilder {
 
   virtual ~LIFIndexBuilder();
 
-  virtual void OnKeyAdded(const Slice& key) override {
-    current_block_first_internal_key_.assign(key.data(), key.size());
-  }
+  virtual void OnKeyAdded(const Slice& key) override;
 
   using IndexBuilder::Finish;
   virtual Status Finish(IndexBlocks* index_blocks,
@@ -313,18 +314,17 @@ class ShortenedIndexBuilder : public IndexBuilder {
     if (include_first_key_ && current_block_first_internal_key_.empty()) {
       current_block_first_internal_key_.assign(key.data(), key.size());
     }
+    // std::string current_key = ExtractUserKey(key).ToString(false);
+    // std::cout << KeyDistanceCalculator::ByteWiseCalculator::Differ(
+    //                  current_key, last_key_, 0)
+    //           << std::endl;
+    // last_key_ = ExtractUserKey(key).ToString(false);
   }
 
   virtual void AddIndexEntry(std::string* last_key_in_current_block,
                              const Slice* first_key_in_next_block,
                              const BlockHandle& block_handle) override {
     if (first_key_in_next_block != nullptr) {
-      KeyDistanceCalculator::char_vector temp =
-          KeyDistanceCalculator::ByteWiseCalculator::Differ(
-              Slice(last_key_in_current_block->c_str(),
-                    first_key_in_next_block->size()),
-              *first_key_in_next_block);
-      std::cout << temp << std::endl;
       if (shortening_mode_ !=
           BlockBasedTableOptions::IndexShorteningMode::kNoShortening) {
         comparator_->FindShortestSeparator(last_key_in_current_block,
@@ -397,7 +397,7 @@ class ShortenedIndexBuilder : public IndexBuilder {
   BlockBasedTableOptions::IndexShorteningMode shortening_mode_;
   BlockHandle last_encoded_handle_ = BlockHandle::NullBlockHandle();
   std::string current_block_first_internal_key_;
-  Slice last_key_;
+  std::string last_key_;
 };
 
 // HashIndexBuilder contains a binary-searchable primary index and the

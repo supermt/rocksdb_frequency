@@ -853,10 +853,10 @@ static std::string ColumnFamilyName(size_t i) {
   }
 }
 
-DEFINE_string(compression_type, "snappy",
+DEFINE_string(compression_type, "nocompression",
               "Algorithm to use to compress the database");
 static enum rocksdb::CompressionType FLAGS_compression_type_e =
-    rocksdb::kSnappyCompression;
+    rocksdb::kNoCompression;
 
 DEFINE_int64(sample_for_compression, 0, "Sample every N block for compression");
 
@@ -1722,7 +1722,7 @@ class Stats {
     std::string memory_log = "MEMORY_USAGE" + std::to_string(id);
     memory_foot_print = fopen(memory_log.c_str(), "w");
     fprintf(memory_foot_print,
-            "index_size,memtable_size,sst_size,block_cache/"
+            "opseq,index_size,memtable_size,sst_size,block_cache/"
             "block_cache_capacity,block_cache_pinned_usage\n");
     fflush(memory_foot_print);
   }
@@ -1847,6 +1847,9 @@ class Stats {
     }
 
     done_ += num_ops;
+    // if (done_%1000 == 0){
+    //   fprintf(memory_foot_print, "%ld,%s",done_, ReportMemory(db).c_str());
+    // }
     if (done_ >= next_report_) {
       if (!FLAGS_stats_interval) {
         if (next_report_ < 1000)
@@ -1864,7 +1867,7 @@ class Stats {
         else
           next_report_ += 100000;
         fprintf(stderr, "... finished %" PRIu64 " ops%30s\r", done_, "");
-        fprintf(memory_foot_print, "%s", ReportMemory(db).c_str());
+        fprintf(memory_foot_print, "%ld,%s", done_, ReportMemory(db).c_str());
       } else {
         uint64_t now = FLAGS_env->NowMicros();
         int64_t usecs_since_last = now - last_report_finish_;
@@ -3597,7 +3600,8 @@ class Benchmark {
         }
         block_based_options.index_type = BlockBasedTableOptions::kHashSearch;
       } else if (FLAGS_use_machine_learning_search) {
-        block_based_options.index_type = BlockBasedTableOptions::kMachineLearningPredictioinSearch;
+        block_based_options.index_type =
+            BlockBasedTableOptions::kMachineLearningPredictioinSearch;
       } else {
         block_based_options.index_type = BlockBasedTableOptions::kBinarySearch;
       }

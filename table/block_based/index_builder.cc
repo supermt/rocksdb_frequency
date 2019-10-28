@@ -278,7 +278,9 @@ void LIFIndexBuilder::AddIndexEntry(std::string* last_key_in_current_block,
   std::string block_str;
   block_handle.EncodeTo(&block_str);
 }
-
+void LIFIndexBuilder::OnKeyAdded(const Slice& key){
+    current_block_first_internal_key_.assign(key.data(), key.size());
+  }
 Status LIFIndexBuilder::Finish(IndexBlocks* index_blocks,
                                const BlockHandle& last_partition_block_handle) {
   if (seperator_is_key_plus_seq_) {
