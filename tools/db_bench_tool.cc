@@ -2800,6 +2800,24 @@ class Benchmark {
       } else if (name == "fillrandom") {
         fresh_db = true;
         method = &Benchmark::WriteRandom;
+      } else if (name == "fillpoisson") {
+        fresh_db = true;
+        method = &Benchmark::WritePoi;
+      } else if (name == "fillnormal") {
+        fresh_db = true;
+        method = &Benchmark::WriteNor;
+      } else if (name == "fillexp") {
+        fresh_db = true;
+        method = &Benchmark::WriteExp;
+      } else if (name == "fillpoissonrd") {
+        fresh_db = true;
+        method = &Benchmark::WritePoiRD;
+      } else if (name == "fillnormalrd") {
+        fresh_db = true;
+        method = &Benchmark::WriteNorRD;
+      } else if (name == "fillexprd") {
+        fresh_db = true;
+        method = &Benchmark::WriteExpRD;
       } else if (name == "filluniquerandom") {
         fresh_db = true;
         if (num_threads > 1) {
@@ -4069,7 +4087,18 @@ class Benchmark {
     }
   }
 
-  enum WriteMode { RANDOM, SEQUENTIAL, UNIQUE_RANDOM };
+  enum WriteMode {
+    RANDOM,
+    SEQUENTIAL,
+    UNIQUE_RANDOM,
+    // distribution in sequential or randomly manner
+    EXP_SEQ,
+    POI_SEQ,
+    NORMAL_SEQ,
+    EXP_RAND,
+    NORMAL_RAND,
+    POI_RAND,
+  };
 
   void WriteSeqDeterministic(ThreadState* thread) {
     DoDeterministicCompact(thread, open_options_.compaction_style, SEQUENTIAL);
@@ -4083,6 +4112,22 @@ class Benchmark {
   void WriteSeq(ThreadState* thread) { DoWrite(thread, SEQUENTIAL); }
 
   void WriteRandom(ThreadState* thread) { DoWrite(thread, RANDOM); }
+
+  void WritePoi(ThreadState* thread) { DoWrite(thread, POI_SEQ); }
+
+  void WritePoiRD(ThreadState* thread) { DoWrite(thread, POI_RAND); }
+
+  void WriteNor(ThreadState* thread) { DoWrite(thread, POI_SEQ); }
+
+  void WriteNorRD(ThreadState* thread) { DoWrite(thread, POI_RAND); }
+
+  void WriteExp(ThreadState* thread) { DoWrite(thread, POI_SEQ); }
+
+  void WriteExpRD(ThreadState* thread) { DoWrite(thread, POI_RAND); }
+
+  void WriteDistribution(ThreadState* thread, WriteMode distribution) {
+    DoWrite(thread, distribution);
+  }
 
   void WriteUniqueRandom(ThreadState* thread) {
     DoWrite(thread, UNIQUE_RANDOM);
@@ -4106,6 +4151,67 @@ class Benchmark {
             values_.begin(), values_.end(),
             std::default_random_engine(static_cast<unsigned int>(FLAGS_seed)));
       }
+      if (mode_ >= EXP_SEQ) {
+        assert(num <= 100000000);
+        std::cout << "creating certain distributed workloads" << std::endl;
+        // Using different distributions
+        values_.resize(num_);
+        // fill the vector according to the distribution
+        switch (mode_) {
+          case EXP_SEQ:
+          case EXP_RAND:
+            ExpDistributedVector();
+            break;
+          case NORMAL_SEQ:
+          case NORMAL_RAND:
+            NorDistributiedVector();
+            break;
+          case POI_SEQ:
+          case POI_RAND:
+            PoiDistributiedVector();
+            break;
+          default:
+            break;
+        }
+        if (mode_ < EXP_RAND) {
+          std::cout << "Sorting the certain distributed workloads" << std::endl;
+          // the generate value are out-of-order, no need for shuffle
+          std::sort(values_.begin(), values_.end());
+        }
+      }
+    }
+
+    void ExpDistributedVector() {
+      double const exp_dist_mean = 1;
+      double const exp_dist_lambda = 1 / exp_dist_mean;
+      std::random_device rd;
+      std::exponential_distribution<> rng(exp_dist_lambda);
+      std::mt19937 rnd_gen(rd());
+
+      for (uint64_t i = 0; i < num_; ++i) {
+        values_[i] = (int)(rng(rnd_gen) * num_);
+      }
+    }
+
+    void PoiDistributiedVector() {
+      std::default_random_engine generator;
+      std::poisson_distribution<> distribution(num_ / 2);
+
+      for (uint64_t i = 0; i < num_; ++i) {
+        values_[i] = int(distribution(generator));
+      }
+    }
+
+    void NorDistributiedVector() {
+      std::default_random_engine generator;
+      std::normal_distribution<> distribution(num_ / 2, sqrt(num_));
+
+      for (uint64_t i = 0; i < num_; ++i) {
+        values_[i] = int(distribution(generator));
+        if (values_[i] <= 0) {
+          values_[i] = 0;
+        }
+      }
     }
 
     uint64_t Next() {
@@ -4117,6 +4223,10 @@ class Benchmark {
         case UNIQUE_RANDOM:
           assert(next_ < num_);
           return values_[next_++];
+        default:
+          assert(next_ < num_);
+          return values_[next_++];
+          return std::numeric_limits<uint64_t>::max();
       }
       assert(false);
       return std::numeric_limits<uint64_t>::max();
@@ -4230,15 +4340,9 @@ class Benchmark {
         int64_t rand_num = key_gens[id]->Next();
         GenerateKeyFromInt(rand_num, FLAGS_num, &key);
         if (use_blob_db_) {
-#ifndef ROCKSDB_LITE
-          Slice val = gen.Generate(value_size_);
-          int ttl = rand() % FLAGS_blob_db_max_ttl_range;
-          blob_db::BlobDB* blobdb =
-              static_cast<blob_db::BlobDB*>(db_with_cfh->db);
-          s = blobdb->PutWithTTL(write_options_, key, val, ttl);
-#endif  //  ROCKSDB_LITE
         } else if (FLAGS_num_column_families <= 1) {
           batch.Put(key, gen.Generate(value_size_));
+          // std::cout << key.ToString(true) << std::endl;
         } else {
           // We use same rand_num as seed for key and column family so that we
           // can deterministically find the cfh corresponding to a particular
@@ -4263,10 +4367,6 @@ class Benchmark {
               GenerateKeyFromInt(begin_num + offset, FLAGS_num,
                                  &expanded_keys[offset]);
               if (use_blob_db_) {
-#ifndef ROCKSDB_LITE
-                s = db_with_cfh->db->Delete(write_options_,
-                                            expanded_keys[offset]);
-#endif  //  ROCKSDB_LITE
               } else if (FLAGS_num_column_families <= 1) {
                 batch.Delete(expanded_keys[offset]);
               } else {
@@ -4279,11 +4379,6 @@ class Benchmark {
             GenerateKeyFromInt(begin_num + range_tombstone_width_, FLAGS_num,
                                &end_key);
             if (use_blob_db_) {
-#ifndef ROCKSDB_LITE
-              s = db_with_cfh->db->DeleteRange(
-                  write_options_, db_with_cfh->db->DefaultColumnFamily(),
-                  begin_key, end_key);
-#endif  //  ROCKSDB_LITE
             } else if (FLAGS_num_column_families <= 1) {
               batch.DeleteRange(begin_key, end_key);
             } else {

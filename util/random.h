@@ -104,6 +104,9 @@ class Random64 {
   uint64_t Skewed(int max_log) {
     return Uniform(uint64_t(1) << Uniform(max_log + 1));
   }
+
+  
+
 };
 
 }  // namespace rocksdb
