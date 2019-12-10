@@ -1538,6 +1538,7 @@ Status DBImpl::GetImpl(const ReadOptions& read_options, const Slice& key,
   MergeContext merge_context;
   SequenceNumber max_covering_tombstone_seq = 0;
 
+
   Status s;
   // First look in the memtable, then in the immutable memtable (if any).
   // s is both in/out. When in, s could either be OK or MergeInProgress.

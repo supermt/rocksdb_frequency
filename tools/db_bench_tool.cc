@@ -853,7 +853,7 @@ static std::string ColumnFamilyName(size_t i) {
   }
 }
 
-DEFINE_string(compression_type, "nocompression",
+DEFINE_string(compression_type, "none",
               "Algorithm to use to compress the database");
 static enum rocksdb::CompressionType FLAGS_compression_type_e =
     rocksdb::kNoCompression;
@@ -1722,7 +1722,7 @@ class Stats {
     std::string memory_log = "MEMORY_USAGE" + std::to_string(id);
     memory_foot_print = fopen(memory_log.c_str(), "w");
     fprintf(memory_foot_print,
-            "opseq,index_size,memtable_size,sst_size,block_cache/"
+            "timestamp,opseq,index_size,memtable_size,sst_size,block_cache/"
             "block_cache_capacity,block_cache_pinned_usage\n");
     fflush(memory_foot_print);
   }
@@ -1832,24 +1832,29 @@ class Stats {
     if (FLAGS_histogram) {
       uint64_t now = FLAGS_env->NowMicros();
       uint64_t micros = now - last_op_finish_;
-
       if (hist_.find(op_type) == hist_.end()) {
         auto hist_temp = std::make_shared<HistogramImpl>();
         hist_.insert({op_type, std::move(hist_temp)});
       }
       hist_[op_type]->Add(micros);
-
       if (micros > 20000 && !FLAGS_stats_interval) {
         fprintf(stderr, "long op: %" PRIu64 " micros%30s\r", micros, "");
         fflush(stderr);
       }
       last_op_finish_ = now;
     }
+    if (((FLAGS_env->NowMicros() - start_) % 1000000) == 0) {
+      fprintf(stderr, "%ld,%ld,%s",
+              ((FLAGS_env->NowMicros() - start_) / 1000000), done_,
+              ReportMemory(db).c_str());
+      // std::cout << now - start_ << std::endl;
+    }
 
     done_ += num_ops;
     // if (done_%1000 == 0){
     //   fprintf(memory_foot_print, "%ld,%s",done_, ReportMemory(db).c_str());
     // }
+
     if (done_ >= next_report_) {
       if (!FLAGS_stats_interval) {
         if (next_report_ < 1000)
@@ -1867,7 +1872,6 @@ class Stats {
         else
           next_report_ += 100000;
         fprintf(stderr, "... finished %" PRIu64 " ops%30s\r", done_, "");
-        fprintf(memory_foot_print, "%ld,%s", done_, ReportMemory(db).c_str());
       } else {
         uint64_t now = FLAGS_env->NowMicros();
         int64_t usecs_since_last = now - last_report_finish_;
@@ -3004,7 +3008,6 @@ class Benchmark {
 
       if (method != nullptr) {
         fprintf(stdout, "DB path: [%s]\n", FLAGS_db.c_str());
-
 #ifndef ROCKSDB_LITE
         // A trace_file option can be provided both for trace and replay
         // operations. But db_bench does not support tracing and replaying at
@@ -3075,6 +3078,7 @@ class Benchmark {
           printf("Warming up benchmark by running %d times\n", num_warmup);
         }
 
+        std::cout << "warmup, pass" << std::endl;
         for (int i = 0; i < num_warmup; i++) {
           RunBenchmark(num_threads, name, method);
         }
