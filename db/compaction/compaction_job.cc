@@ -796,7 +796,13 @@ Status CompactionJob::Install(const MutableCFOptions& mutable_cf_options) {
            << compaction_job_stats_->file_prepare_write_nanos;
   }
 
-  // stream << "lsm_state";
+    stream.StartArray();
+    for (int level = 0; level < vstorage->num_levels(); ++level) {
+        stream << vstorage->NumLevelFiles(level);
+    }
+    stream.EndArray();
+
+    // stream << "lsm_state";
   // stream.StartObject();
   // for (int level = 0; level < vstorage->num_levels(); ++level) {
   //   stream << "level " + std::to_string(level);

@@ -3078,7 +3078,6 @@ class Benchmark {
           printf("Warming up benchmark by running %d times\n", num_warmup);
         }
 
-        std::cout << "warmup, pass" << std::endl;
         for (int i = 0; i < num_warmup; i++) {
           RunBenchmark(num_threads, name, method);
         }
@@ -4391,6 +4390,7 @@ class Benchmark {
             }
           }
         }
+
       }
       if (!use_blob_db_) {
         s = db_with_cfh->db->Write(write_options_, &batch);
