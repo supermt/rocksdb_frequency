@@ -31,11 +31,14 @@ enum CompactionStyle : char {
   // FIFO compaction style
   // Not supported in ROCKSDB_LITE
   kCompactionStyleFIFO = 0x2,
+  // A hybrid storage specific compaction style,
+  // aim to prevent the quicksand effect.
+  kCompactionStyleQuickSand = 0x3,
   // Disable background compaction. Compaction jobs are submitted
   // via CompactFiles().
   // Not supported in ROCKSDB_LITE
-  kCompactionStyleNone = 0x3,
-};
+  kCompactionStyleNone = 0x4,
+  };
 
 // In Level-based compaction, it Determines which file from a level to be
 // picked to merge to the next level. We suggest people try

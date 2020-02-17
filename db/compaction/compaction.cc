@@ -575,6 +575,12 @@ bool Compaction::ShouldFormSubcompactions() const {
   if (max_subcompactions_ <= 1 || cfd_ == nullptr) {
     return false;
   }
+  // add by jinghuan
+  // TODO: Consider the situation in QuickSand
+  if (cfd_->ioptions()->compaction_style == kCompactionStyleLevel){
+    return (start_level_ == 0 || is_manual_compaction_) && output_level_ > 0 &&
+           !IsOutputLevelEmpty();
+  }
   if (cfd_->ioptions()->compaction_style == kCompactionStyleLevel) {
     return (start_level_ == 0 || is_manual_compaction_) && output_level_ > 0 &&
            !IsOutputLevelEmpty();

@@ -21,7 +21,7 @@
 
 using namespace rocksdb;
 
-std::string kDBPath = "[{\"/home/supermt/rocksdb_nvme\", 10GB}, {\"/media/supermt/hdd/dataset\", 1TB}]";
+std::string kDBPath = "/tmp/rocksdb_options_file_example";
 
 namespace {
 // A dummy compaction filter

@@ -93,8 +93,11 @@ enum class CompactionReason : int {
   kExternalSstIngestion,
   // Compaction due to SST file being too old
   kPeriodicCompaction,
+  // Delayed Compaction preventing the QuickSand Effect, Add by Jinghuan
+  kQuickSandCompaction,
   // total number of compaction reasons, new reasons must be added above this.
   kNumOfReasons,
+
 };
 
 enum class FlushReason : int {

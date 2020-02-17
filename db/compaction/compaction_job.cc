@@ -94,6 +94,8 @@ const char* GetCompactionReasonString(CompactionReason compaction_reason) {
       return "ExternalSstIngestion";
     case CompactionReason::kPeriodicCompaction:
       return "PeriodicCompaction";
+    case CompactionReason::kQuickSandCompaction:
+      return "QuickSandCompaction";
     case CompactionReason::kNumOfReasons:
       // fall through
     default:
