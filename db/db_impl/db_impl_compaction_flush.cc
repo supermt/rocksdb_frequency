@@ -1034,6 +1034,8 @@ namespace rocksdb {
     // takes running compactions into account (by skipping files that are already
     // being compacted). Since we just changed compaction score, we recalculate it
     // here.
+    // jinghuan: maybe we should override this function, or just do this
+    //  according to the compaction style
     version->storage_info()->ComputeCompactionScore(*cfd->ioptions(),
                                                     *c->mutable_cf_options());
 

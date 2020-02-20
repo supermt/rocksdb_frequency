@@ -2305,6 +2305,11 @@ void VersionStorageInfo::ComputeCompactionScore(
     const MutableCFOptions& mutable_cf_options) {
   for (int level = 0; level <= MaxInputLevel(); level++) {
     double score;
+    // jinghuan: compute the score according to the compaction style
+    if (immutable_cf_options.compaction_style == kCompactionStyleQuickSand){
+      score += 1; // remove this
+    }
+
     if (level == 0) {
       // We treat level-0 specially by bounding the number of files
       // instead of number of bytes for two reasons:
@@ -2381,6 +2386,7 @@ void VersionStorageInfo::ComputeCompactionScore(
 
   // sort all the levels based on their score. Higher scores get listed
   // first. Use bubble sort because the number of entries are small.
+  //jinghuan: where the compaction score is sorted.
   for (int i = 0; i < num_levels() - 2; i++) {
     for (int j = i + 1; j < num_levels() - 1; j++) {
       if (compaction_score_[i] < compaction_score_[j]) {

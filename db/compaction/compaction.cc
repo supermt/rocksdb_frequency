@@ -112,7 +112,7 @@ void Compaction::GetBoundaryKeys(
     }
   }
 }
-// add by jinghuan
+//jinghuan: for complex log format usage only.
 std::string GetStorageHierarchyString(VersionStorageInfo* vstorage) {
   //    std::string result = "";
 
@@ -127,7 +127,7 @@ std::string GetStorageHierarchyString(VersionStorageInfo* vstorage) {
   return stringStream.str();
 };
 
-// add by jinghuan
+// jinghuan: for complex log format usage only
 std::string GetStorageFileString(VersionStorageInfo* vstorage) {
   //    std::string result = "";
 
@@ -277,10 +277,6 @@ Compaction::Compaction(VersionStorageInfo* vstorage,
   if (is_manual_compaction_) {
     compaction_reason_ = CompactionReason::kManualCompaction;
   }
-  // add by jinghuan
-
-  std::string compaction_tree = GetStorageFileString(vstorage);
-  
 
   if (max_subcompactions_ == 0) {
     max_subcompactions_ = immutable_cf_options_.max_subcompactions;
@@ -574,12 +570,6 @@ bool Compaction::IsOutputLevelEmpty() const {
 bool Compaction::ShouldFormSubcompactions() const {
   if (max_subcompactions_ <= 1 || cfd_ == nullptr) {
     return false;
-  }
-  // add by jinghuan
-  // TODO: Consider the situation in QuickSand
-  if (cfd_->ioptions()->compaction_style == kCompactionStyleLevel){
-    return (start_level_ == 0 || is_manual_compaction_) && output_level_ > 0 &&
-           !IsOutputLevelEmpty();
   }
   if (cfd_->ioptions()->compaction_style == kCompactionStyleLevel) {
     return (start_level_ == 0 || is_manual_compaction_) && output_level_ > 0 &&

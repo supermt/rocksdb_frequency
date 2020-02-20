@@ -14,10 +14,21 @@
 namespace rocksdb {
 // Picking compactions for QuickSand Compaction
   class QuickSandCompactionPicker : public CompactionPicker {
+  private:
+    autovector<FdWithKeyRange> *quicksandfiles;
   public:
     QuickSandCompactionPicker(const ImmutableCFOptions &ioptions,
                               const InternalKeyComparator *icmp)
-      : CompactionPicker(ioptions, icmp) {}
+      : CompactionPicker(ioptions, icmp) {
+      quicksandfiles = new autovector<FdWithKeyRange>();
+      quicksandfiles->clear();
+    }
+
+    ~QuickSandCompactionPicker() {
+      if (quicksandfiles != nullptr) {
+        delete quicksandfiles;
+      }
+    }
 
     virtual Compaction *PickCompaction(const std::string &cf_name,
                                        const MutableCFOptions &mutable_cf_options,
@@ -26,6 +37,10 @@ namespace rocksdb {
 
     virtual bool NeedsCompaction(
       const VersionStorageInfo *vstorage) const override;
+
+    bool CollectQuickSand(const VersionStorageInfo *vstorage) const;
+
+    autovector<FdWithKeyRange> *GetQuickSandList();
   };
 
 }  // namespace rocksdb
