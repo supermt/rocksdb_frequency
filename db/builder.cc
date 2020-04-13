@@ -129,6 +129,14 @@ Status BuildTable(
       file->SetIOPriority(io_priority);
       file->SetWriteLifeTimeHint(write_hint);
 
+//      struct timespec deadline;
+//      deadline.tv_sec = 0;
+//      deadline.tv_nsec = 1000;
+//
+//      clock_nanosleep(CLOCK_REALTIME, 0, &deadline, NULL);
+
+      env->SleepForMicroseconds(mutable_cf_options.target_file_size_base);
+
       file_writer.reset(
           new WritableFileWriter(std::move(file), fname, env_options, env,
                                  ioptions.statistics, ioptions.listeners));

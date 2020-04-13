@@ -225,12 +225,6 @@ class LocalSavePoint {
   ~LocalSavePoint() { assert(committed_); }
 #endif
   Status commit() {
-    struct timespec deadline;
-    deadline.tv_sec = 0;
-    deadline.tv_nsec = 1000 * batch_->max_bytes_;
-
-    clock_nanosleep(CLOCK_REALTIME, 0, &deadline, NULL);
-
 #ifndef NDEBUG
     committed_ = true;
 #endif
