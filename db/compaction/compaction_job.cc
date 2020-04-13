@@ -769,6 +769,7 @@ Status CompactionJob::Install(const MutableCFOptions& mutable_cf_options) {
 
   UpdateCompactionJobStats(stats);
 
+
   auto stream = event_logger_->LogToBuffer(log_buffer_);
   stream << "job" << job_id_ << "event"
          << "compaction_finished"
@@ -803,23 +804,6 @@ Status CompactionJob::Install(const MutableCFOptions& mutable_cf_options) {
       stream << vstorage->NumLevelFiles(level);
   }
   stream.EndArray();
-
-    // stream << "lsm_state";
-  // stream.StartObject();
-  // for (int level = 0; level < vstorage->num_levels(); ++level) {
-  //   stream << "level " + std::to_string(level);
-  //   stream.StartArray();
-  //   for (const auto& file : vstorage->GetTheHierarchy()[level]) {
-  //     std::string file_info = "{" + std::to_string(file->fd.GetPathId()) + "," +
-  //                             std::to_string(file->fd.GetNumber()) + "," +
-  //                             std::to_string(file->fd.read_count) + "," +
-  //                             std::to_string(file->fd.hit_count)+"}";
-  //   stream << file_info;
-  //   }
-  //   stream.EndArray();
-  // }
-  // stream.EndObject();
-
   CleanupCompaction();
   return status;
 }
